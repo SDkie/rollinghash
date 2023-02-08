@@ -18,9 +18,9 @@ import (
 type CmdType int
 
 const (
-	NO_CMD CmdType = -1
-	MATCH
-	LITERAL
+	NO_CMD  CmdType = -1
+	MATCH           = 0
+	LITERAL         = 1
 )
 
 // Delta struct contains all the data required to generate delta file

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/SDkie/rollinghash/pkg/signature"
+	"github.com/SDkie/rollinghash/pkg/util"
 	"github.com/google/uuid"
 )
 
@@ -27,7 +28,7 @@ func TestSignature(t *testing.T) {
 			t.Error("error generating signature: ", err)
 		}
 
-		match, err := compareFileContents(outfile, c.ExpectedSigFileName)
+		match, err := util.CompareFileContents(outfile, c.ExpectedSigFileName)
 		if err != nil {
 			t.Error("error comparing files: ", err)
 		}
@@ -37,18 +38,4 @@ func TestSignature(t *testing.T) {
 
 		os.Remove(outfile)
 	}
-}
-
-func compareFileContents(file1, file2 string) (bool, error) {
-	data1, err := os.ReadFile(file1)
-	if err != nil {
-		return false, err
-	}
-
-	data2, err := os.ReadFile(file2)
-	if err != nil {
-		return false, err
-	}
-
-	return string(data1) == string(data2), nil
 }
