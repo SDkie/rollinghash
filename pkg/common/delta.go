@@ -45,7 +45,7 @@ func NewDelta(sigFileName, oldFileName, newFileName, deltaFileName string) (*Del
 	}
 	delta.NewFile, err = os.Open(newFileName)
 	if err != nil {
-		log.Printf("Error opening newFile: %s", err)
+		log.Printf("error opening newFile: %s", err)
 		return nil, err
 	}
 	delta.DeltaFile, err = os.Create(deltaFileName)
@@ -88,10 +88,16 @@ func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) 
 		}
 		if err != nil {
 			if err == io.EOF {
-				return nil
+				break
 			}
 			return err
 		}
+		// got EOF if len(delta.CurrChunk) < int(delta.ChunkLen)
+		if len(delta.CurrChunk) < int(delta.ChunkLen) {
+			break
+		}
+
+		log.Printf("searching Hash: %08x", delta.Hash)
 
 		index, ok := delta.Hashmap[delta.Hash]
 		var match bool
@@ -110,13 +116,37 @@ func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) 
 			return err
 		}
 	}
+
+	for len(delta.CurrChunk) > 0 {
+		index, ok := delta.Hashmap[delta.Hash]
+		var match bool
+		if ok {
+			match, err = delta.CompareChunks(index)
+			if err != nil {
+				return err
+			}
+		}
+		if match {
+			err = delta.ChunkMatched(index)
+			delta.CurrChunk = []byte{}
+		} else {
+			err = delta.ChunkNotMatched()
+			delta.SkipFirstByte()
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return delta.WriteToDeltaFile()
 }
 
 func (d *Delta) ReadFullChunk() error {
-	_, err := d.NewFile.Read(d.CurrChunk)
+	n, err := d.NewFile.Read(d.CurrChunk)
 	if err != nil {
 		return err
 	}
+	d.CurrChunk = d.CurrChunk[:n]
 	d.Hash, d.Pow = rabinkarp.Hash(d.CurrChunk)
 	return nil
 }
@@ -134,12 +164,17 @@ func (d *Delta) ReadNextByte() error {
 	return nil
 }
 
+func (d *Delta) SkipFirstByte() {
+	d.Hash = rabinkarp.RollingHash(d.Hash, d.Pow, uint32(d.CurrChunk[0]), 0)
+	d.CurrChunk = d.CurrChunk[1:]
+}
+
 func (d *Delta) CompareChunks(chunkIndex uint32) (bool, error) {
 	oldFileChunk := make([]byte, d.ChunkLen)
 
 	_, err := d.OldFile.ReadAt(oldFileChunk, int64(chunkIndex*d.ChunkLen))
 	if err != nil {
-		log.Printf("Error reading file: %s", err)
+		log.Printf("error reading file: %s", err)
 		return false, err
 	}
 
@@ -195,21 +230,28 @@ func (d *Delta) WriteToDeltaFile() error {
 	var content string
 	if d.CurrCmd == 0 {
 		content = fmt.Sprintf("%02x%03x%03x", d.CurrCmd, d.StartChunkIndex, d.EndChunkIndex)
-
 	} else {
 		content = fmt.Sprintf("%02x%06x", d.CurrCmd, len(d.Literals))
-		content += string(d.Literals)
 	}
 
 	data, err := hex.DecodeString(content)
 	if err != nil {
-		log.Printf("Error decoding hex string: %s", err)
+		log.Printf("error decoding hex string: %s", err)
 		return err
 	}
 	_, err = d.DeltaFile.Write(data)
 	if err != nil {
-		log.Printf("Error writing to delta file: %s", err)
+		log.Printf("error writing to delta file: %s", err)
 		return err
+	}
+
+	if d.Literals != nil {
+		_, err = d.DeltaFile.Write(d.Literals)
+		if err != nil {
+			log.Printf("error writing literals to delta file: %s", err)
+			return err
+		}
+		d.Literals = nil
 	}
 
 	return nil
