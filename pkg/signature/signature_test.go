@@ -16,8 +16,8 @@ type Case struct {
 }
 
 func TestSignature(t *testing.T) {
+	// NOTE: check delta_test.go for test case details
 	var cases []Case
-
 	for i := 1; i <= 15; i++ {
 		c := Case{
 			InputFileName:       fmt.Sprintf("../testdata/test%d.org", i),
@@ -30,15 +30,15 @@ func TestSignature(t *testing.T) {
 		outfile := fmt.Sprintf("%s.sig", uuid.New().String())
 		err := signature.GenerateSignature(c.InputFileName, outfile)
 		if err != nil {
-			t.Errorf("Test%d failed: error generating signature: %s", i, err)
+			t.Errorf("Test%d failed: error generating signature: %s", i+1, err)
 		}
 
 		match, err := util.CompareFileContents(outfile, c.ExpectedSigFileName)
 		if err != nil {
-			t.Errorf("Test%d failed: error comparing files: %s", i, err)
+			t.Errorf("Test%d failed: error comparing files: %s", i+1, err)
 		}
 		if !match {
-			t.Errorf("Test%d failed: signature mismatch for testfile:%s", i, c.InputFileName)
+			t.Errorf("Test%d failed: signature mismatch for testfile:%s", i+1, c.InputFileName)
 		}
 
 		os.Remove(outfile)

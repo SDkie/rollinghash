@@ -7,7 +7,7 @@ import (
 
 var signatureCmd = &cobra.Command{
 	Use:   "signature",
-	Short: "Generate signature for given file",
+	Short: "Generate signature for input file",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		signature.GenerateSignature(args[0], args[1])

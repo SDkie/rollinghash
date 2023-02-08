@@ -46,12 +46,17 @@ type Delta struct {
 // it opens all the provided files
 // also reads the signature file and insert all the hashes in a hashmap
 func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Delta, error) {
+	var delta Delta
 	sig, err := signature.ReadSignature(sigFileName)
 	if err != nil {
 		return nil, err
 	}
+	delta.chunkLen = sig.ChunkLen
+	delta.hashmap = make(map[uint32]uint32)
+	for i := uint32(0); i < sig.TotalChunks; i++ {
+		delta.hashmap[sig.Hashes[i]] = i
+	}
 
-	var delta Delta
 	delta.oldFile, err = os.Open(oldFileName)
 	if err != nil {
 		log.Printf("error opening oldFile: %s", err)
@@ -69,14 +74,9 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Del
 	}
 
 	delta.currCmd = NO_CMD
-	delta.chunkLen = sig.ChunkLen
 	delta.currChunk = make([]byte, delta.chunkLen)
-	delta.hashmap = make(map[uint32]uint32)
-	for i := uint32(0); i < sig.TotalChunks; i++ {
-		delta.hashmap[sig.Hashes[i]] = i
-	}
 
-	util.WriteUint32InHex(delta.deltaFile, delta.chunkLen)
+	err = util.WriteUint32InHex(delta.deltaFile, delta.chunkLen)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +85,8 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Del
 }
 
 // GenerateDelta generates the delta file
+// signature and original file both are required for genearing delta,
+// as just matching of hash can't guarantee matching of the chunks
 func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) error {
 	delta, err := newDelta(oldFileName, sigFileName, newFileName, deltaFileName)
 	if err != nil {
@@ -112,46 +114,22 @@ func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) 
 			break
 		}
 
-		log.Printf("searching Hash: %08x", delta.hash)
-
-		index, ok := delta.hashmap[delta.hash]
-		var match bool
-		if ok {
-			match, err = delta.compareChunks(index)
-			if err != nil {
-				return err
-			}
-		}
-		if match {
-			err = delta.chunkFound(index)
-		} else {
-			err = delta.literalFound()
-		}
+		err = delta.update()
 		if err != nil {
 			return err
 		}
 	}
 
 	for len(delta.currChunk) > 0 {
-		log.Printf("searching Hash: %08x", delta.hash)
-
-		index, ok := delta.hashmap[delta.hash]
-		var match bool
-		if ok {
-			match, err = delta.compareChunks(index)
-			if err != nil {
-				return err
-			}
-		}
-		if match {
-			err = delta.chunkFound(index)
-			delta.currChunk = []byte{}
-		} else {
-			err = delta.literalFound()
-			delta.skipFirstByte()
-		}
+		err = delta.update()
 		if err != nil {
 			return err
+		}
+
+		if delta.currCmd == LITERAL {
+			delta.skipFirstByte()
+		} else {
+			delta.currChunk = []byte{}
 		}
 	}
 
@@ -198,17 +176,40 @@ func (d *Delta) skipFirstByte() {
 	d.currChunk = d.currChunk[1:]
 }
 
-// compareChunks compares the currChunk with the chunk from the oldFile
-func (d *Delta) compareChunks(chunkIndex uint32) (bool, error) {
-	oldFileChunk := make([]byte, d.chunkLen)
-
-	_, err := d.oldFile.ReadAt(oldFileChunk, int64(chunkIndex*d.chunkLen))
+// update searching chunk in oldFile and updates the delta based on that
+func (d *Delta) update() error {
+	match, index, err := d.searchChunk()
 	if err != nil {
-		log.Printf("error reading file: %s", err)
-		return false, err
+		return err
 	}
 
-	return string(oldFileChunk) == string(d.currChunk), nil
+	if match {
+		return d.chunkFound(index)
+	}
+
+	return d.literalFound()
+}
+
+// searchChunk searches for the currChunk in oldFile
+func (d *Delta) searchChunk() (bool, uint32, error) {
+	log.Printf("searching Hash: %08x", d.hash)
+	index, ok := d.hashmap[d.hash]
+	if !ok {
+		return false, 0, nil
+	}
+
+	oldFileChunk := make([]byte, d.chunkLen)
+	_, err := d.oldFile.ReadAt(oldFileChunk, int64(index*d.chunkLen))
+	if err != nil {
+		log.Printf("error reading file: %s", err)
+		return false, 0, err
+	}
+
+	if string(oldFileChunk) != string(d.currChunk) {
+		return false, 0, nil
+	}
+
+	return true, index, nil
 }
 
 // chunkFound is called when currChunk matches with a chunk in oldFile
@@ -242,11 +243,6 @@ func (d *Delta) chunkFound(index uint32) error {
 func (d *Delta) literalFound() error {
 	log.Printf("Found literal: %s\n", string(d.currChunk[0]))
 
-	if d.currCmd == LITERAL {
-		d.literals = append(d.literals, d.currChunk[0])
-		return nil
-	}
-
 	if d.currCmd == MATCH {
 		err := d.writeToDeltaFile()
 		if err != nil {
@@ -255,7 +251,7 @@ func (d *Delta) literalFound() error {
 	}
 
 	d.currCmd = LITERAL
-	d.literals = d.currChunk[:1]
+	d.literals = append(d.literals, d.currChunk[0])
 	return nil
 }
 

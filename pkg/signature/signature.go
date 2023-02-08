@@ -34,24 +34,22 @@ func GenerateSignature(inputFileName, sigFileName string) error {
 	}
 
 	fileSize := stats.Size()
-	chunkSize := getOptimalChunkSize(fileSize)
-
 	if fileSize == 0 {
 		err := fmt.Errorf("input filesize is 0")
 		log.Println(err)
 		return err
 	}
 
+	chunkSize := getOptimalChunkSize(fileSize)
 	err = util.WriteUint32InHex(sigfile, uint32(chunkSize))
 	if err != nil {
 		return err
 	}
 
-	log.Printf("File size: %d", stats.Size())
+	log.Printf("File size: %d", fileSize)
 	log.Printf("Chunk size: %d", chunkSize)
 
 	chunk := make([]byte, chunkSize)
-
 	for i := 0; ; i++ {
 		_, err = infile.Read(chunk)
 		if err != nil {

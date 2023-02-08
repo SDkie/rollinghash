@@ -37,7 +37,6 @@ type Case struct {
 
 func TestDelta(t *testing.T) {
 	var cases []Case
-
 	for i := 1; i <= 15; i++ {
 		c := Case{
 			InputFileName:   fmt.Sprintf("../testdata/test%d.org", i),
@@ -52,15 +51,15 @@ func TestDelta(t *testing.T) {
 		outfile := fmt.Sprintf("%s.sig", uuid.New().String())
 		err := delta.GenerateDelta(c.InputFileName, c.SigFileName, c.UpdatedFileName, outfile)
 		if err != nil {
-			t.Errorf("Test%d failed: error generating delta: %s", i, err)
+			t.Errorf("Test%d failed: error generating delta: %s", i+1, err)
 		}
 
 		match, err := util.CompareFileContents(outfile, c.DeltaFileName)
 		if err != nil {
-			t.Errorf("Test%d failed: error comparing files: %s", i, err)
+			t.Errorf("Test%d failed: error comparing files: %s", i+1, err)
 		}
 		if !match {
-			t.Errorf("Test%d failed: delta mismatch for testfile:%s", i, c.InputFileName)
+			t.Errorf("Test%d failed: delta mismatch for testfile:%s", i+1, c.InputFileName)
 		}
 
 		os.Remove(outfile)

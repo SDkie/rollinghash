@@ -1,8 +1,10 @@
 package util
 
-import "os"
+import (
+	"os"
+)
 
-// CompareFileContents compares the contents of two files
+// CompareFileContents reports whether contents of two files are the same or not
 func CompareFileContents(file1, file2 string) (bool, error) {
 	data1, err := os.ReadFile(file1)
 	if err != nil {

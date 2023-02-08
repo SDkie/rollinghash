@@ -7,7 +7,7 @@ import (
 
 var deltaCmd = &cobra.Command{
 	Use:   "delta",
-	Short: "Generate delta for given file",
+	Short: "Generate delta between original and updated file",
 	Args:  cobra.ExactArgs(4),
 	Run: func(cmd *cobra.Command, args []string) {
 		delta.GenerateDelta(args[0], args[1], args[2], args[3])
