@@ -20,7 +20,9 @@ type Case struct {
 func TestDelta(t *testing.T) {
 	cases := []Case{
 		{"../testdata/test1.org", "../testdata/test1.sig", "../testdata/test1.org", "../testdata/test1.delta"},
-		{"../testdata/test2.org", "../testdata/test2.sig", "../testdata/test2.org", "../testdata/test2.delta"},
+		{"../testdata/test2.org", "../testdata/test2.sig", "../testdata/test2.update", "../testdata/test2.delta"},
+		{"../testdata/test3.org", "../testdata/test3.sig", "../testdata/test3.update", "../testdata/test3.delta"},
+		{"../testdata/test4.org", "../testdata/test4.sig", "../testdata/test4.org", "../testdata/test4.delta"},
 	}
 
 	for _, c := range cases {
@@ -40,5 +42,4 @@ func TestDelta(t *testing.T) {
 
 		os.Remove(outfile)
 	}
-
 }
