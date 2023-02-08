@@ -12,7 +12,7 @@ import (
 )
 
 // GenerateSignature generates a signature file for a given input file.
-func GenerateSignature(inputFileName, outputFileName string) error {
+func GenerateSignature(inputFileName, sigFileName string) error {
 	infile, err := os.Open(inputFileName)
 	if err != nil {
 		log.Printf("error opening input file: %s", err)
@@ -20,12 +20,12 @@ func GenerateSignature(inputFileName, outputFileName string) error {
 	}
 	defer infile.Close()
 
-	outfile, err := os.Create(outputFileName)
+	sigfile, err := os.OpenFile(sigFileName, os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		log.Printf("error creating signature file: %s", err)
 		return err
 	}
-	defer outfile.Close()
+	defer sigfile.Close()
 
 	stats, err := infile.Stat()
 	if err != nil {
@@ -42,7 +42,7 @@ func GenerateSignature(inputFileName, outputFileName string) error {
 		return err
 	}
 
-	err = util.WriteUint32InHex(outfile, uint32(chunkSize))
+	err = util.WriteUint32InHex(sigfile, uint32(chunkSize))
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func GenerateSignature(inputFileName, outputFileName string) error {
 		}
 
 		hash, _ := rabinkarp.Hash(chunk)
-		err = util.WriteUint32InHex(outfile, hash)
+		err = util.WriteUint32InHex(sigfile, hash)
 		if err != nil {
 			return err
 		}

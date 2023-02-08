@@ -8,7 +8,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use: "rollinghash",
+	Use:   "rollinghash",
+	Short: "rollinghash is a CLI tool to calculate signature and delta for files using rolling hash algorithm",
 }
 
 func Execute() {

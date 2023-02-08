@@ -15,5 +15,9 @@ var signatureCmd = &cobra.Command{
 }
 
 func init() {
+	signatureCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		cmd.Println("Usage: rollinghash signature <input_file> <signature_file>")
+		return nil
+	})
 	rootCmd.AddCommand(signatureCmd)
 }

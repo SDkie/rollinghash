@@ -18,9 +18,9 @@ import (
 type CmdType int
 
 const (
-	NO_CMD  CmdType = -1
-	MATCH           = 0
-	LITERAL         = 1
+	NO_CMD CmdType = iota - 1
+	MATCH
+	LITERAL
 )
 
 // Delta struct contains all the data required to generate delta file
@@ -62,7 +62,7 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Del
 		log.Printf("error opening newFile: %s", err)
 		return nil, err
 	}
-	delta.deltaFile, err = os.Create(deltaFileName)
+	delta.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		log.Printf("error creating deltaFile: %s", err)
 		return nil, err

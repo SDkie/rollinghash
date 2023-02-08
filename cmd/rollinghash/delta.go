@@ -15,5 +15,9 @@ var deltaCmd = &cobra.Command{
 }
 
 func init() {
+	deltaCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		cmd.Println("Usage: rollinghash delta <original_file> <signature_file> <updated_file> <delta_file>")
+		return nil
+	})
 	rootCmd.AddCommand(deltaCmd)
 }
