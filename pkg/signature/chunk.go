@@ -1,6 +1,8 @@
 package signature
 
-import "math"
+import (
+	"math"
+)
 
 // getOptimalChunkSize returns the optimal chunk size for a given file size.
 // The optimal chunk size is sqrt(filesize) with a 256 min size rounded down to a multiple of 128.

@@ -226,11 +226,12 @@ func (d *Delta) searchChunk() (bool, uint32, error) {
 
 	//read the chunk from oldFile and compare the content
 	oldFileChunk := make([]byte, d.chunkLen)
-	_, err := d.oldFile.ReadAt(oldFileChunk, int64(index*d.chunkLen))
-	if err != nil {
+	n, err := d.oldFile.ReadAt(oldFileChunk, int64(index*d.chunkLen))
+	if err != nil && err != io.EOF {
 		log.Printf("error reading file: %s", err)
 		return false, 0, err
 	}
+	oldFileChunk = oldFileChunk[:n]
 
 	if string(oldFileChunk) != string(d.currChunk) {
 		return false, 0, nil

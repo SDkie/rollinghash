@@ -54,8 +54,9 @@ func GenerateSignature(inputFileName, sigFileName string) error {
 	log.Printf("Chunk size: %d", chunkSize)
 
 	chunk := make([]byte, chunkSize)
+	var n int
 	for i := 0; ; i++ {
-		_, err = infile.Read(chunk)
+		n, err = infile.Read(chunk)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -63,6 +64,7 @@ func GenerateSignature(inputFileName, sigFileName string) error {
 			log.Printf("error reading file: %s", err)
 			return err
 		}
+		chunk = chunk[:n]
 
 		hash, _ := rabinkarp.Hash(chunk)
 		err = util.WriteUint32InHex(sigfile, hash)
