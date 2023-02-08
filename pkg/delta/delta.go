@@ -45,7 +45,7 @@ type Delta struct {
 // newDelta create a new Delta struct
 // it opens all the provided files
 // also reads the signature file and insert all the hashes in a hashmap
-func newDelta(sigFileName, oldFileName, newFileName, deltaFileName string) (*Delta, error) {
+func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Delta, error) {
 	sig, err := signature.ReadSignature(sigFileName)
 	if err != nil {
 		return nil, err
@@ -85,8 +85,8 @@ func newDelta(sigFileName, oldFileName, newFileName, deltaFileName string) (*Del
 }
 
 // GenerateDelta generates the delta file
-func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) error {
-	delta, err := newDelta(sigFileName, oldFileName, newFileName, deltaFileName)
+func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) error {
+	delta, err := newDelta(oldFileName, sigFileName, newFileName, deltaFileName)
 	if err != nil {
 		return err
 	}
@@ -160,6 +160,11 @@ func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) 
 func (d *Delta) readFullChunk() error {
 	n, err := d.newFile.Read(d.currChunk)
 	if err != nil {
+		if err == io.EOF {
+			d.currChunk = []byte{}
+			d.hash = 0
+			d.pow = 0
+		}
 		return err
 	}
 	d.currChunk = d.currChunk[:n]
