@@ -47,6 +47,7 @@ type Delta struct {
 // also reads the signature file and insert all the hashes in a hashmap
 func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Delta, error) {
 	var delta Delta
+	// Signature file
 	sig, err := signature.ReadSignature(sigFileName)
 	if err != nil {
 		return nil, err
@@ -57,16 +58,31 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Del
 		delta.hashmap[sig.Hashes[i]] = i
 	}
 
+	//  Old file
 	delta.oldFile, err = os.Open(oldFileName)
 	if err != nil {
 		log.Printf("error opening oldFile: %s", err)
 		return nil, err
 	}
+
+	// New file
 	delta.newFile, err = os.Open(newFileName)
 	if err != nil {
 		log.Printf("error opening newFile: %s", err)
 		return nil, err
 	}
+	stats, err := delta.newFile.Stat()
+	if err != nil {
+		log.Printf("error getting file stats: %s", err)
+		return nil, err
+	}
+	if stats.Size() == 0 {
+		err := fmt.Errorf("newFile is empty")
+		log.Println(err)
+		return nil, err
+	}
+
+	// Delta file
 	delta.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Printf("error creating deltaFile: %s", err)
@@ -97,7 +113,6 @@ func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) 
 	defer delta.newFile.Close()
 
 	for {
-		var err error
 		if delta.currCmd == NO_CMD || delta.currCmd == MATCH {
 			err = delta.readFullChunk()
 		} else {
@@ -186,7 +201,6 @@ func (d *Delta) update() error {
 	if match {
 		return d.chunkFound(index)
 	}
-
 	return d.literalFound()
 }
 
@@ -198,6 +212,7 @@ func (d *Delta) searchChunk() (bool, uint32, error) {
 		return false, 0, nil
 	}
 
+	//read the chunk from oldFile and compare the content
 	oldFileChunk := make([]byte, d.chunkLen)
 	_, err := d.oldFile.ReadAt(oldFileChunk, int64(index*d.chunkLen))
 	if err != nil {
