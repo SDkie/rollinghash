@@ -177,6 +177,10 @@ func (d *Delta) readNextByte() error {
 	b := make([]byte, 1)
 	_, err := d.newFile.Read(b)
 	if err != nil {
+		if err == io.EOF {
+			d.skipFirstByte()
+			return nil
+		}
 		return err
 	}
 

@@ -27,6 +27,10 @@ type Case struct {
 // Test6 : Two Chunk file with literals at middle
 // Test7 : Two Chunk file with literals at end
 // Test8 : Two Chunk file with literals at start, middle and end
+// Test9 : Two Chunk file with trimmed first chunk
+// Test10 : Two Chunk file with some chars replaced in first chunk
+// Test11 : Two Chunk file with chunk swapped
+// Test12 : Two Chunk file with double chunks in updated file
 
 func TestDelta(t *testing.T) {
 	cases := []Case{
@@ -38,6 +42,10 @@ func TestDelta(t *testing.T) {
 		{"../testdata/test6.org", "../testdata/test6.sig", "../testdata/test6.update", "../testdata/test6.delta"},
 		{"../testdata/test7.org", "../testdata/test7.sig", "../testdata/test7.update", "../testdata/test7.delta"},
 		{"../testdata/test8.org", "../testdata/test8.sig", "../testdata/test8.update", "../testdata/test8.delta"},
+		{"../testdata/test9.org", "../testdata/test9.sig", "../testdata/test9.update", "../testdata/test9.delta"},
+		{"../testdata/test10.org", "../testdata/test10.sig", "../testdata/test10.update", "../testdata/test10.delta"},
+		{"../testdata/test11.org", "../testdata/test11.sig", "../testdata/test11.update", "../testdata/test11.delta"},
+		{"../testdata/test12.org", "../testdata/test12.sig", "../testdata/test12.update", "../testdata/test12.delta"},
 	}
 
 	for _, c := range cases {

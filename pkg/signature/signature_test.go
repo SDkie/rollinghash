@@ -25,6 +25,10 @@ func TestSignature(t *testing.T) {
 		{"../testdata/test6.org", "../testdata/test6.sig"},
 		{"../testdata/test7.org", "../testdata/test7.sig"},
 		{"../testdata/test8.org", "../testdata/test8.sig"},
+		{"../testdata/test9.org", "../testdata/test9.sig"},
+		{"../testdata/test10.org", "../testdata/test10.sig"},
+		{"../testdata/test11.org", "../testdata/test11.sig"},
+		{"../testdata/test12.org", "../testdata/test12.sig"},
 	}
 
 	for _, c := range cases {
