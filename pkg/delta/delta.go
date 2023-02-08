@@ -12,15 +12,23 @@ import (
 	"github.com/SDkie/rollinghash/pkg/util"
 )
 
+// CmdType is used for creating delta file
+// 00 in the delta file means match
+// 01 in the delta file means miss (literal)
+type CmdType int
+
+const (
+	NO_CMD CmdType = -1
+	MATCH
+	LITERAL
+)
+
 // Delta struct contains all the data required to generate delta file
 type Delta struct {
 	chunkLen uint32
 	hashmap  map[uint32]uint32
 
-	// -1 = no command
-	// 0 = match
-	// 1 = literal
-	currCmd         int
+	currCmd         CmdType
 	startChunkIndex uint32
 	endChunkIndex   uint32
 	literals        []byte
@@ -60,7 +68,7 @@ func newDelta(sigFileName, oldFileName, newFileName, deltaFileName string) (*Del
 		return nil, err
 	}
 
-	delta.currCmd = -1
+	delta.currCmd = NO_CMD
 	delta.chunkLen = sig.ChunkLen
 	delta.currChunk = make([]byte, delta.chunkLen)
 	delta.hashmap = make(map[uint32]uint32)
@@ -88,7 +96,7 @@ func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) 
 
 	for {
 		var err error
-		if delta.currCmd == -1 || delta.currCmd == 0 {
+		if delta.currCmd == NO_CMD || delta.currCmd == MATCH {
 			err = delta.readFullChunk()
 		} else {
 			err = delta.readNextByte()
@@ -115,9 +123,9 @@ func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) 
 			}
 		}
 		if match {
-			err = delta.chunkMatched(index)
+			err = delta.chunkFound(index)
 		} else {
-			err = delta.chunkNotMatched()
+			err = delta.literalFound()
 		}
 		if err != nil {
 			return err
@@ -134,10 +142,10 @@ func GenerateDelta(sigFileName, oldFileName, newFileName, deltaFileName string) 
 			}
 		}
 		if match {
-			err = delta.chunkMatched(index)
+			err = delta.chunkFound(index)
 			delta.currChunk = []byte{}
 		} else {
-			err = delta.chunkNotMatched()
+			err = delta.literalFound()
 			delta.skipFirstByte()
 		}
 		if err != nil {
@@ -192,25 +200,25 @@ func (d *Delta) compareChunks(chunkIndex uint32) (bool, error) {
 	return string(oldFileChunk) == string(d.currChunk), nil
 }
 
-// chunkMatched is called when chunk is matched at the given index
-func (d *Delta) chunkMatched(index uint32) error {
+// chunkFound is called when currChunk matches with a chunk in oldFile
+func (d *Delta) chunkFound(index uint32) error {
 	log.Printf("Chunk matched: %d\n", index)
 
-	if d.currCmd == 0 && d.endChunkIndex+1 == index {
+	if d.currCmd == MATCH && d.endChunkIndex+1 == index {
 		d.endChunkIndex++
 		d.hash = 0
 		d.pow = 0
 		return nil
 	}
 
-	if d.currCmd != -1 {
+	if d.currCmd != NO_CMD {
 		err := d.writeToDeltaFile()
 		if err != nil {
 			return err
 		}
 	}
 
-	d.currCmd = 0
+	d.currCmd = MATCH
 	d.startChunkIndex = index
 	d.endChunkIndex = index
 	d.hash = 0
@@ -218,23 +226,24 @@ func (d *Delta) chunkMatched(index uint32) error {
 	return nil
 }
 
-// chunkNotMatched is called when chunk is not matched
-func (d *Delta) chunkNotMatched() error {
+// literalFound is called when literal is found
+// that is because currChunk does not match with any chunk in oldFile
+func (d *Delta) literalFound() error {
 	log.Printf("Found literal: %s\n", string(d.currChunk[0]))
 
-	if d.currCmd == 1 {
+	if d.currCmd == LITERAL {
 		d.literals = append(d.literals, d.currChunk[0])
 		return nil
 	}
 
-	if d.currCmd == 0 {
+	if d.currCmd == MATCH {
 		err := d.writeToDeltaFile()
 		if err != nil {
 			return err
 		}
 	}
 
-	d.currCmd = 1
+	d.currCmd = LITERAL
 	d.literals = d.currChunk[:1]
 	return nil
 }
@@ -242,10 +251,14 @@ func (d *Delta) chunkNotMatched() error {
 // writeToDeltaFile writes the current command to the delta file
 func (d *Delta) writeToDeltaFile() error {
 	var content string
-	if d.currCmd == 0 {
+	if d.currCmd == MATCH {
 		content = fmt.Sprintf("%02x%03x%03x", d.currCmd, d.startChunkIndex, d.endChunkIndex)
-	} else {
+	} else if d.currCmd == LITERAL {
 		content = fmt.Sprintf("%02x%06x", d.currCmd, len(d.literals))
+	} else {
+		err := fmt.Errorf("can't write invalid command:%d to delta file", d.currCmd)
+		log.Println(err)
+		return err
 	}
 
 	data, err := hex.DecodeString(content)
@@ -259,7 +272,7 @@ func (d *Delta) writeToDeltaFile() error {
 		return err
 	}
 
-	if d.literals != nil {
+	if d.currCmd == LITERAL {
 		_, err = d.deltaFile.Write(d.literals)
 		if err != nil {
 			log.Printf("error writing literals to delta file: %s", err)
