@@ -1,4 +1,4 @@
-package common
+package signature
 
 import "math"
 

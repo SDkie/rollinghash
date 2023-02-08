@@ -1,4 +1,4 @@
-package common
+package signature
 
 import (
 	"encoding/binary"
@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/SDkie/rollinghash/pkg/rabinkarp"
+	"github.com/SDkie/rollinghash/pkg/util"
 )
 
 // GenerateSignature generates a signature file for a given input file.
@@ -34,7 +35,7 @@ func GenerateSignature(inputFileName, outputFileName string) error {
 	fileSize := stats.Size()
 	chunkSize := getOptimalChunkSize(fileSize)
 
-	WriteUint32(outfile, uint32(chunkSize))
+	util.WriteUint32InHex(outfile, uint32(chunkSize))
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func GenerateSignature(inputFileName, outputFileName string) error {
 		}
 
 		hash, _ := rabinkarp.Hash(chunk)
-		err = WriteUint32(outfile, hash)
+		err = util.WriteUint32InHex(outfile, hash)
 		if err != nil {
 			return err
 		}
@@ -65,6 +66,7 @@ func GenerateSignature(inputFileName, outputFileName string) error {
 	return nil
 }
 
+// Signature contains all the information stored in a signature file
 type Signature struct {
 	ChunkLen    uint32
 	TotalChunks uint32

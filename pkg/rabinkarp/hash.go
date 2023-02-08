@@ -20,6 +20,7 @@ func Hash(sep []byte) (uint32, uint32) {
 	return hash, pow
 }
 
-func RollingHash(hash, pow, old, new uint32) uint32 {
+// Rotate create the new hash of the rotated chunk
+func Rotate(hash, pow, old, new uint32) uint32 {
 	return hash*PrimeRK - uint32(old)*pow + uint32(new)
 }
