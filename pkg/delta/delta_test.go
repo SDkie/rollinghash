@@ -17,6 +17,12 @@ type Case struct {
 	DeltaFileName   string
 }
 
+// TestFiles format
+// TestX.org    : Original file
+// TestX.sig    : Signature file
+// TestX.update : Updated file
+// TestX.delta  : Delta file
+
 // Infomations about test cases
 // Test1 : One Chunk file with no changes
 // Test2 : One Chunk file with literals at start
@@ -30,7 +36,7 @@ type Case struct {
 // Test9 : Two Chunk file with trimmed first chunk
 // Test10 : Two Chunk file with some chars replaced in first chunk
 // Test11 : Two Chunk file with chunk swapped
-// Test12 : Two Chunk file with double chunks in updated file
+// Test12 : Two Chunk file with duplicate chunks in updated file
 // Test13 : Two Chunk file with missing first chunk in updated file
 // Test14 : Two Chunk file with missing second chunk in updated file
 // Test15 : Two Chunk file with updated file having no common data

@@ -12,6 +12,18 @@ import (
 	"github.com/SDkie/rollinghash/pkg/util"
 )
 
+// Delta File Format:
+// 4 bytes - chunk length
+// 4 bytes - cmd with chunk index or literal with size
+// if chunk match:
+// 	    '00'      - cmd
+//      'XXX'     - start chunk index
+//	    'XXX'     - end chunk index
+// if literal:
+//	    '01'      - cmd (1 byte)
+//      'XXXXXX'  - literal size (3 bytes)
+// in case of literal after the cmd and size, literal data is written
+
 // CmdType is used for creating delta file
 // 00 in the delta file means match
 // 01 in the delta file means miss (literal)

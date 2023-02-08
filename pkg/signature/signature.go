@@ -11,6 +11,10 @@ import (
 	"github.com/SDkie/rollinghash/pkg/util"
 )
 
+// Signature File Format:
+// 4 bytes - chunk length
+// 4 bytes - hash for each chunk
+
 // GenerateSignature generates a signature file for a given input file.
 func GenerateSignature(inputFileName, sigFileName string) error {
 	infile, err := os.Open(inputFileName)
