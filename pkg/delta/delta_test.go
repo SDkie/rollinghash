@@ -17,6 +17,17 @@ type Case struct {
 	DeltaFileName   string
 }
 
+// Infomations about test cases
+// Test1 : One Chunk file with no changes
+// Test2 : One Chunk file with literals at start
+// Test3 : One Chunk file with literals at end
+
+// Test4 : Two Chunk file with no changes
+// Test5 : Two Chunk file with literals at start
+// Test6 : Two Chunk file with literals at middle
+// Test7 : Two Chunk file with literals at end
+// Test8 : Two Chunk file with literals at start, middle and end
+
 func TestDelta(t *testing.T) {
 	cases := []Case{
 		{"../testdata/test1.org", "../testdata/test1.sig", "../testdata/test1.org", "../testdata/test1.delta"},
