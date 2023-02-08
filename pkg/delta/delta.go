@@ -62,7 +62,7 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Del
 		log.Printf("error opening newFile: %s", err)
 		return nil, err
 	}
-	delta.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL, 0666)
+	delta.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Printf("error creating deltaFile: %s", err)
 		return nil, err
