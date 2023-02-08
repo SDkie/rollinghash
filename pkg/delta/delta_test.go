@@ -31,13 +31,14 @@ type Case struct {
 // Test10 : Two Chunk file with some chars replaced in first chunk
 // Test11 : Two Chunk file with chunk swapped
 // Test12 : Two Chunk file with double chunks in updated file
-// Test13: Two Chunk file with missing first chunk in updated file
-// Test14: Two Chunk file with missing second chunk in updated file
+// Test13 : Two Chunk file with missing first chunk in updated file
+// Test14 : Two Chunk file with missing second chunk in updated file
+// Test15 : Two Chunk file with updated file having no common data
 
 func TestDelta(t *testing.T) {
 	var cases []Case
 
-	for i := 1; i <= 14; i++ {
+	for i := 1; i <= 15; i++ {
 		c := Case{
 			InputFileName:   fmt.Sprintf("../testdata/test%d.org", i),
 			SigFileName:     fmt.Sprintf("../testdata/test%d.sig", i),
@@ -47,19 +48,19 @@ func TestDelta(t *testing.T) {
 		cases = append(cases, c)
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		outfile := fmt.Sprintf("%s.sig", uuid.New().String())
 		err := delta.GenerateDelta(c.InputFileName, c.SigFileName, c.UpdatedFileName, outfile)
 		if err != nil {
-			t.Error("error generating signature: ", err)
+			t.Errorf("Test%d failed: error generating delta: %s", i, err)
 		}
 
 		match, err := util.CompareFileContents(outfile, c.DeltaFileName)
 		if err != nil {
-			t.Error("error comparing files: ", err)
+			t.Errorf("Test%d failed: error comparing files: %s", i, err)
 		}
 		if !match {
-			t.Errorf("signature mismatch for testfile:%s", c.InputFileName)
+			t.Errorf("Test%d failed: delta mismatch for testfile:%s", i, c.InputFileName)
 		}
 
 		os.Remove(outfile)

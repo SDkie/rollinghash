@@ -133,6 +133,8 @@ func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) 
 	}
 
 	for len(delta.currChunk) > 0 {
+		log.Printf("searching Hash: %08x", delta.hash)
+
 		index, ok := delta.hashmap[delta.hash]
 		var match bool
 		if ok {

@@ -18,7 +18,7 @@ type Case struct {
 func TestSignature(t *testing.T) {
 	var cases []Case
 
-	for i := 1; i <= 14; i++ {
+	for i := 1; i <= 15; i++ {
 		c := Case{
 			InputFileName:       fmt.Sprintf("../testdata/test%d.org", i),
 			ExpectedSigFileName: fmt.Sprintf("../testdata/test%d.sig", i),
@@ -26,19 +26,19 @@ func TestSignature(t *testing.T) {
 		cases = append(cases, c)
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		outfile := fmt.Sprintf("%s.sig", uuid.New().String())
 		err := signature.GenerateSignature(c.InputFileName, outfile)
 		if err != nil {
-			t.Error("error generating signature: ", err)
+			t.Errorf("Test%d failed: error generating signature: %s", i, err)
 		}
 
 		match, err := util.CompareFileContents(outfile, c.ExpectedSigFileName)
 		if err != nil {
-			t.Error("error comparing files: ", err)
+			t.Errorf("Test%d failed: error comparing files: %s", i, err)
 		}
 		if !match {
-			t.Errorf("signature mismatch for testfile:%s", c.InputFileName)
+			t.Errorf("Test%d failed: signature mismatch for testfile:%s", i, c.InputFileName)
 		}
 
 		os.Remove(outfile)
