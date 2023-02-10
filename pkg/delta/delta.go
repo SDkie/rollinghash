@@ -36,7 +36,7 @@ const (
 )
 
 // Delta struct contains all the data required to generate delta file
-type Delta struct {
+type delta struct {
 	chunkLen uint32
 	hashmap  map[uint32]uint32
 
@@ -57,33 +57,33 @@ type Delta struct {
 // newDelta create a new Delta struct
 // it opens all the provided files
 // also reads the signature file and insert all the hashes in a hashmap
-func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Delta, error) {
-	var delta Delta
+func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*delta, error) {
+	var d delta
 	// Signature file
 	sig, err := signature.ReadSignature(sigFileName)
 	if err != nil {
 		return nil, err
 	}
-	delta.chunkLen = sig.ChunkLen
-	delta.hashmap = make(map[uint32]uint32)
+	d.chunkLen = sig.ChunkLen
+	d.hashmap = make(map[uint32]uint32)
 	for i := uint32(0); i < sig.TotalChunks; i++ {
-		delta.hashmap[sig.Hashes[i]] = i
+		d.hashmap[sig.Hashes[i]] = i
 	}
 
 	//  Old file
-	delta.oldFile, err = os.Open(oldFileName)
+	d.oldFile, err = os.Open(oldFileName)
 	if err != nil {
 		log.Printf("error opening oldFile: %s", err)
 		return nil, err
 	}
 
 	// New file
-	delta.newFile, err = os.Open(newFileName)
+	d.newFile, err = os.Open(newFileName)
 	if err != nil {
 		log.Printf("error opening newFile: %s", err)
 		return nil, err
 	}
-	stats, err := delta.newFile.Stat()
+	stats, err := d.newFile.Stat()
 	if err != nil {
 		log.Printf("error getting file stats: %s", err)
 		return nil, err
@@ -95,40 +95,44 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*Del
 	}
 
 	// Delta file
-	delta.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	d.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Printf("error creating deltaFile: %s", err)
 		return nil, err
 	}
 
-	delta.currCmd = NO_CMD
-	delta.currChunk = make([]byte, delta.chunkLen)
+	d.currCmd = NO_CMD
+	d.currChunk = make([]byte, d.chunkLen)
 
-	err = util.WriteUint32InHex(delta.deltaFile, delta.chunkLen)
+	err = util.WriteUint32InHex(d.deltaFile, d.chunkLen)
 	if err != nil {
 		return nil, err
 	}
 
-	return &delta, nil
+	return &d, nil
+}
+
+func (d *delta) cleanup() {
+	d.oldFile.Close()
+	d.deltaFile.Close()
+	d.newFile.Close()
 }
 
 // GenerateDelta generates the delta file
 // signature and original file both are required for genearing delta,
 // as just matching of hash can't guarantee matching of the chunks
 func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) error {
-	delta, err := newDelta(oldFileName, sigFileName, newFileName, deltaFileName)
+	d, err := newDelta(oldFileName, sigFileName, newFileName, deltaFileName)
 	if err != nil {
 		return err
 	}
-	defer delta.oldFile.Close()
-	defer delta.deltaFile.Close()
-	defer delta.newFile.Close()
+	defer d.cleanup()
 
 	for {
-		if delta.currCmd == NO_CMD || delta.currCmd == MATCH {
-			err = delta.readFullChunk()
+		if d.currCmd == NO_CMD || d.currCmd == MATCH {
+			err = d.readFullChunk()
 		} else {
-			err = delta.readNextByte()
+			err = d.readNextByte()
 		}
 		if err != nil {
 			if err == io.EOF {
@@ -136,35 +140,35 @@ func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) 
 			}
 			return err
 		}
-		// got EOF if len(delta.CurrChunk) < int(delta.ChunkLen)
-		if len(delta.currChunk) < int(delta.chunkLen) {
+		// got EOF if len(d.CurrChunk) < int(d.ChunkLen)
+		if len(d.currChunk) < int(d.chunkLen) {
 			break
 		}
 
-		err = delta.update()
+		err = d.searchAndUpdate()
 		if err != nil {
 			return err
 		}
 	}
 
-	for len(delta.currChunk) > 0 {
-		err = delta.update()
+	for len(d.currChunk) > 0 {
+		err = d.searchAndUpdate()
 		if err != nil {
 			return err
 		}
 
-		if delta.currCmd == LITERAL {
-			delta.skipFirstByte()
+		if d.currCmd == LITERAL {
+			d.skipFirstByte()
 		} else {
-			delta.currChunk = []byte{}
+			d.currChunk = []byte{}
 		}
 	}
 
-	return delta.writeToDeltaFile()
+	return d.writeToDeltaFile()
 }
 
 // readFullChunk tries to read the fullChunk from the newFile
-func (d *Delta) readFullChunk() error {
+func (d *delta) readFullChunk() error {
 	n, err := d.newFile.Read(d.currChunk)
 	if err != nil {
 		if err == io.EOF {
@@ -180,7 +184,7 @@ func (d *Delta) readFullChunk() error {
 }
 
 // readNextByte tries to read the next byte and rotate the chunk
-func (d *Delta) readNextByte() error {
+func (d *delta) readNextByte() error {
 	b := make([]byte, 1)
 	_, err := d.newFile.Read(b)
 	if err != nil {
@@ -198,13 +202,13 @@ func (d *Delta) readNextByte() error {
 }
 
 // skipFirstByte skips the first byte of the currChunk and calculates the hash
-func (d *Delta) skipFirstByte() {
+func (d *delta) skipFirstByte() {
 	d.hash, d.pow = rabinkarp.RollOut(d.hash, d.pow, uint32(d.currChunk[0]))
 	d.currChunk = d.currChunk[1:]
 }
 
 // update searching chunk in oldFile and updates the delta based on that
-func (d *Delta) update() error {
+func (d *delta) searchAndUpdate() error {
 	match, index, err := d.searchChunk()
 	if err != nil {
 		return err
@@ -217,7 +221,7 @@ func (d *Delta) update() error {
 }
 
 // searchChunk searches for the currChunk in oldFile
-func (d *Delta) searchChunk() (bool, uint32, error) {
+func (d *delta) searchChunk() (bool, uint32, error) {
 	log.Printf("searching Hash: %08x", d.hash)
 	index, ok := d.hashmap[d.hash]
 	if !ok {
@@ -241,7 +245,7 @@ func (d *Delta) searchChunk() (bool, uint32, error) {
 }
 
 // chunkFound is called when currChunk matches with a chunk in oldFile
-func (d *Delta) chunkFound(index uint32) error {
+func (d *delta) chunkFound(index uint32) error {
 	log.Printf("Chunk matched: %d\n", index)
 
 	if d.currCmd == MATCH && d.endChunkIndex+1 == index {
@@ -268,7 +272,7 @@ func (d *Delta) chunkFound(index uint32) error {
 
 // literalFound is called when literal is found
 // that is because currChunk does not match with any chunk in oldFile
-func (d *Delta) literalFound() error {
+func (d *delta) literalFound() error {
 	log.Printf("Found literal: %s\n", string(d.currChunk[0]))
 
 	if d.currCmd == MATCH {
@@ -284,7 +288,7 @@ func (d *Delta) literalFound() error {
 }
 
 // writeToDeltaFile writes the current command to the delta file
-func (d *Delta) writeToDeltaFile() error {
+func (d *delta) writeToDeltaFile() error {
 	var content string
 	if d.currCmd == MATCH {
 		content = fmt.Sprintf("%02x%03x%03x", d.currCmd, d.startChunkIndex, d.endChunkIndex)
