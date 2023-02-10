@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/SDkie/rollinghash/pkg/delta"
+	"github.com/SDkie/rollinghash/pkg/signature"
 	"github.com/SDkie/rollinghash/pkg/util"
 	"github.com/google/uuid"
 )
@@ -48,6 +49,13 @@ type Case struct {
 // Test19 : Large Chunk with some literals at the end
 // Test20 : Large Chunk with some literals missing in the middle
 
+// Error Cases:
+// Test100 : Empty input file for signature
+// Test101 : Empty original file for delta
+// Test102 : Invalid signature file for delta
+// Test103 : Invalid chunk size
+// Test104 : Empty updated file
+
 func TestDelta(t *testing.T) {
 	var cases []Case
 	for i := 1; i <= 20; i++ {
@@ -76,5 +84,61 @@ func TestDelta(t *testing.T) {
 		}
 
 		os.Remove(outfile)
+	}
+}
+
+func TestEmptyOriginalFile(t *testing.T) {
+	outfile := fmt.Sprintf("%s.sig", uuid.New().String())
+	defer os.Remove(outfile)
+
+	err := delta.GenerateDelta("../testdata/Test101.org", "../testdata/Test101.sig", "../testdata/Test101.update", outfile)
+	if err == nil {
+		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyOriginalFile)
+	}
+
+	if err != delta.ErrEmptyOriginalFile {
+		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyOriginalFile)
+	}
+}
+
+func TestInvalidSignatureFile(t *testing.T) {
+	outfile := fmt.Sprintf("%s.sig", uuid.New().String())
+	defer os.Remove(outfile)
+
+	err := delta.GenerateDelta("../testdata/Test102.org", "../testdata/Test102.sig", "../testdata/Test102.update", outfile)
+	if err == nil {
+		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidSignatureFile)
+	}
+
+	if err != signature.ErrInvalidSignatureFile {
+		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidSignatureFile)
+	}
+}
+
+func TestInvalidChunkSize(t *testing.T) {
+	outfile := fmt.Sprintf("%s.sig", uuid.New().String())
+	defer os.Remove(outfile)
+
+	err := delta.GenerateDelta("../testdata/Test103.org", "../testdata/Test103.sig", "../testdata/Test103.update", outfile)
+	if err == nil {
+		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidChunkSize)
+	}
+
+	if err != signature.ErrInvalidChunkSize {
+		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidChunkSize)
+	}
+}
+
+func TestEmptyUpdatedFile(t *testing.T) {
+	outfile := fmt.Sprintf("%s.sig", uuid.New().String())
+	defer os.Remove(outfile)
+
+	err := delta.GenerateDelta("../testdata/Test104.org", "../testdata/Test104.sig", "../testdata/Test104.update", outfile)
+	if err == nil {
+		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyUpdatedFile)
+	}
+
+	if err != delta.ErrEmptyUpdatedFile {
+		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyUpdatedFile)
 	}
 }

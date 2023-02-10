@@ -44,3 +44,17 @@ func TestSignature(t *testing.T) {
 		os.Remove(outfile)
 	}
 }
+
+func TestEmptyInputFile(t *testing.T) {
+	outfile := fmt.Sprintf("%s.sig", uuid.New().String())
+	defer os.Remove(outfile)
+
+	err := signature.GenerateSignature("../testdata/Test100.org", outfile)
+	if err == nil {
+		t.Fatalf("Test should fail with error:%s", signature.ErrEmptyInputFile)
+	}
+
+	if err != signature.ErrEmptyInputFile {
+		t.Fatalf("Test should fail with error:%s", signature.ErrEmptyInputFile)
+	}
+}

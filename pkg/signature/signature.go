@@ -16,9 +16,9 @@ import (
 // 4 bytes - hash for each chunk
 
 var (
-	ErrEmptyInputFile   = errors.New("inputFile is empty")
-	ErrInvalidSigFile   = errors.New("invalid signature file")
-	ErrInvalidChunkSize = errors.New("invalid chunk size")
+	ErrEmptyInputFile       = errors.New("inputFile is empty")
+	ErrInvalidSignatureFile = errors.New("invalid signature file")
+	ErrInvalidChunkSize     = errors.New("invalid chunk size")
 )
 
 // GenerateSignature generates a signature file for a given input file.
@@ -105,7 +105,7 @@ func ReadSignature(sigFileName string) (*Signature, error) {
 		return nil, err
 	}
 	if stats.Size() == 0 || stats.Size()%4 != 0 {
-		err := ErrInvalidSigFile
+		err := ErrInvalidSignatureFile
 		log.Println(err)
 		return nil, err
 	}
