@@ -41,9 +41,12 @@ type Case struct {
 // Test14 : Two Chunk file with missing second chunk in updated file
 // Test15 : Two Chunk file with updated file having no common data
 
+// Test16 : Small Chunk with some literals at the start
+// Test17 : Small Chunk with some literals at the end
+
 func TestDelta(t *testing.T) {
 	var cases []Case
-	for i := 1; i <= 15; i++ {
+	for i := 1; i <= 17; i++ {
 		c := Case{
 			InputFileName:   fmt.Sprintf("../testdata/test%d.org", i),
 			SigFileName:     fmt.Sprintf("../testdata/test%d.sig", i),

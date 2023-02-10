@@ -18,7 +18,7 @@ type Case struct {
 func TestSignature(t *testing.T) {
 	// NOTE: check delta_test.go for test case details
 	var cases []Case
-	for i := 1; i <= 15; i++ {
+	for i := 1; i <= 17; i++ {
 		c := Case{
 			InputFileName:       fmt.Sprintf("../testdata/test%d.org", i),
 			ExpectedSigFileName: fmt.Sprintf("../testdata/test%d.sig", i),
