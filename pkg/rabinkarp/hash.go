@@ -1,16 +1,38 @@
 package rabinkarp
 
-// PrimeRK is the prime base used in Rabin-Karp algorithm.
-const PrimeRK = 16777619
+// The RabinKarp seed value.
+//
+// The seed ensures different length zero blocks have different hashes. It
+// effectively encodes the length into the hash.
+const RABINKARP_SEED = 1
+
+// The RabinKarp multiplier.
+//
+// This multiplier has a bit pattern of 1's getting sparser with significance,
+// is the product of 2 large primes, and matches the characterstics for a good
+// LCG multiplier.
+const RABINKARP_MULT = 135283237
+
+// The RabinKarp inverse multiplier.
+//
+// This is the inverse of RABINKARP_MULT modular 2^32. Multiplying by this is
+// equivalent to dividing by RABINKARP_MULT.
+const RABINKARP_INVM = 2565867949
+
+// The RabinKarp seed adjustment.
+//
+// This is a factor used to adjust for the seed when rolling out values. It's
+// equal to; (RABINKARP_MULT - 1) * RABINKARP_SEED
+const RABINKARP_ADJ = 135283236
 
 // Hash returns the hash and the appropriate multiplicative
 // factor for use in Rabin-Karp algorithm.
 func Hash(sep []byte) (uint32, uint32) {
-	hash := uint32(0)
+	hash := uint32(RABINKARP_SEED)
 	for i := 0; i < len(sep); i++ {
-		hash = hash*PrimeRK + uint32(sep[i])
+		hash = hash*RABINKARP_MULT + uint32(sep[i])
 	}
-	var pow, sq uint32 = 1, PrimeRK
+	var pow, sq uint32 = 1, RABINKARP_MULT
 	for i := len(sep); i > 0; i >>= 1 {
 		if i&1 != 0 {
 			pow *= sq
@@ -22,5 +44,11 @@ func Hash(sep []byte) (uint32, uint32) {
 
 // Rotate create the new hash of the rotated chunk
 func Rotate(hash, pow, old, new uint32) uint32 {
-	return hash*PrimeRK - uint32(old)*pow + uint32(new)
+	return hash*RABINKARP_MULT - (old+RABINKARP_ADJ)*pow + new
+}
+
+func RollOut(hash, pow, old uint32) (uint32, uint32) {
+	pow *= RABINKARP_INVM
+	hash -= pow * (old + RABINKARP_ADJ)
+	return hash, pow
 }

@@ -199,7 +199,7 @@ func (d *Delta) readNextByte() error {
 
 // skipFirstByte skips the first byte of the currChunk and calculates the hash
 func (d *Delta) skipFirstByte() {
-	d.hash = rabinkarp.Rotate(d.hash, d.pow, uint32(d.currChunk[0]), 0)
+	d.hash, d.pow = rabinkarp.RollOut(d.hash, d.pow, uint32(d.currChunk[0]))
 	d.currChunk = d.currChunk[1:]
 }
 
