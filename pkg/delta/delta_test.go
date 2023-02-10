@@ -46,10 +46,11 @@ type Case struct {
 
 // Test18 : Large Chunk with some literals at the start
 // Test19 : Large Chunk with some literals at the end
+// Test20 : Large Chunk with some literals missing in the middle
 
 func TestDelta(t *testing.T) {
 	var cases []Case
-	for i := 1; i <= 19; i++ {
+	for i := 1; i <= 20; i++ {
 		c := Case{
 			InputFileName:   fmt.Sprintf("../testdata/test%d.org", i),
 			SigFileName:     fmt.Sprintf("../testdata/test%d.sig", i),
