@@ -2,7 +2,7 @@ package signature
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -14,6 +14,12 @@ import (
 // Signature File Format:
 // 4 bytes - chunk length
 // 4 bytes - hash for each chunk
+
+var (
+	ErrEmptyInputFile   = errors.New("inputFile is empty")
+	ErrInvalidSigFile   = errors.New("invalid signature file")
+	ErrInvalidChunkSize = errors.New("invalid chunk size")
+)
 
 // GenerateSignature generates a signature file for a given input file.
 func GenerateSignature(inputFileName, sigFileName string) error {
@@ -39,7 +45,7 @@ func GenerateSignature(inputFileName, sigFileName string) error {
 
 	fileSize := stats.Size()
 	if fileSize == 0 {
-		err := fmt.Errorf("input filesize is 0")
+		err := ErrEmptyInputFile
 		log.Println(err)
 		return err
 	}
@@ -98,8 +104,8 @@ func ReadSignature(sigFileName string) (*Signature, error) {
 		log.Printf("error getting file stats: %s", err)
 		return nil, err
 	}
-	if stats.Size()%4 != 0 {
-		err := fmt.Errorf("invalid signature file")
+	if stats.Size() == 0 || stats.Size()%4 != 0 {
+		err := ErrInvalidSigFile
 		log.Println(err)
 		return nil, err
 	}
@@ -115,7 +121,7 @@ func ReadSignature(sigFileName string) (*Signature, error) {
 
 	signature.ChunkLen = binary.BigEndian.Uint32(data)
 	if signature.ChunkLen < 256 || signature.ChunkLen%128 != 0 {
-		err := fmt.Errorf("invalid chunk size")
+		err := ErrInvalidChunkSize
 		log.Println(err)
 		return nil, err
 	}

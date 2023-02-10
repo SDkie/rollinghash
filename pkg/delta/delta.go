@@ -2,6 +2,7 @@ package delta
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +11,11 @@ import (
 	"github.com/SDkie/rollinghash/pkg/rabinkarp"
 	"github.com/SDkie/rollinghash/pkg/signature"
 	"github.com/SDkie/rollinghash/pkg/util"
+)
+
+var (
+	ErrEmptyOriginalFile = errors.New("originalFile is empty")
+	ErrEmptyUpdatedFile  = errors.New("updatedFile is empty")
 )
 
 // Delta File Format:
@@ -49,18 +55,18 @@ type delta struct {
 	hash      uint32
 	pow       uint32
 
-	oldFile   *os.File
-	newFile   *os.File
-	deltaFile *os.File
+	originalFile *os.File
+	updatedFile  *os.File
+	deltaFile    *os.File
 }
 
 // newDelta create a new Delta struct
 // it opens all the provided files
 // also reads the signature file and insert all the hashes in a hashmap
-func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*delta, error) {
+func newDelta(originalFile, sigFile, updatedFile, deltaFile string) (*delta, error) {
 	var d delta
 	// Signature file
-	sig, err := signature.ReadSignature(sigFileName)
+	sig, err := signature.ReadSignature(sigFile)
 	if err != nil {
 		return nil, err
 	}
@@ -71,31 +77,41 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*del
 	}
 
 	//  Old file
-	d.oldFile, err = os.Open(oldFileName)
+	d.originalFile, err = os.Open(originalFile)
 	if err != nil {
-		log.Printf("error opening oldFile: %s", err)
+		log.Printf("error opening originalFile: %s", err)
+		return nil, err
+	}
+	stats, err := d.originalFile.Stat()
+	if err != nil {
+		log.Printf("error getting originalFile stats: %s", err)
+		return nil, err
+	}
+	if stats.Size() == 0 {
+		err := ErrEmptyOriginalFile
+		log.Println(err)
 		return nil, err
 	}
 
 	// New file
-	d.newFile, err = os.Open(newFileName)
+	d.updatedFile, err = os.Open(updatedFile)
 	if err != nil {
-		log.Printf("error opening newFile: %s", err)
+		log.Printf("error opening updatedFile: %s", err)
 		return nil, err
 	}
-	stats, err := d.newFile.Stat()
+	stats, err = d.updatedFile.Stat()
 	if err != nil {
-		log.Printf("error getting file stats: %s", err)
+		log.Printf("error getting updatedFile stats: %s", err)
 		return nil, err
 	}
 	if stats.Size() == 0 {
-		err := fmt.Errorf("newFile is empty")
+		err := ErrEmptyUpdatedFile
 		log.Println(err)
 		return nil, err
 	}
 
 	// Delta file
-	d.deltaFile, err = os.OpenFile(deltaFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	d.deltaFile, err = os.OpenFile(deltaFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Printf("error creating deltaFile: %s", err)
 		return nil, err
@@ -113,9 +129,9 @@ func newDelta(oldFileName, sigFileName, newFileName, deltaFileName string) (*del
 }
 
 func (d *delta) cleanup() {
-	d.oldFile.Close()
+	d.originalFile.Close()
 	d.deltaFile.Close()
-	d.newFile.Close()
+	d.updatedFile.Close()
 }
 
 // GenerateDelta generates the delta file
@@ -169,7 +185,7 @@ func GenerateDelta(oldFileName, sigFileName, newFileName, deltaFileName string) 
 
 // readFullChunk tries to read the fullChunk from the newFile
 func (d *delta) readFullChunk() error {
-	n, err := d.newFile.Read(d.currChunk)
+	n, err := d.updatedFile.Read(d.currChunk)
 	if err != nil {
 		if err == io.EOF {
 			d.currChunk = []byte{}
@@ -186,7 +202,7 @@ func (d *delta) readFullChunk() error {
 // readNextByte tries to read the next byte and rotate the chunk
 func (d *delta) readNextByte() error {
 	b := make([]byte, 1)
-	_, err := d.newFile.Read(b)
+	_, err := d.updatedFile.Read(b)
 	if err != nil {
 		if err == io.EOF {
 			d.skipFirstByte()
@@ -230,7 +246,7 @@ func (d *delta) searchChunk() (bool, uint32, error) {
 
 	//read the chunk from oldFile and compare the content
 	oldFileChunk := make([]byte, d.chunkLen)
-	n, err := d.oldFile.ReadAt(oldFileChunk, int64(index*d.chunkLen))
+	n, err := d.originalFile.ReadAt(oldFileChunk, int64(index*d.chunkLen))
 	if err != nil && err != io.EOF {
 		log.Printf("error reading file: %s", err)
 		return false, 0, err
