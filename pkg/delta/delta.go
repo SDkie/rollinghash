@@ -223,7 +223,7 @@ func (d *delta) skipFirstByte() {
 	d.currChunk = d.currChunk[1:]
 }
 
-// update searching chunk in oldFile and updates the delta based on that
+// searchAndUpdate searches for the currChunk in oldFile and updates the delta information
 func (d *delta) searchAndUpdate() error {
 	match, index, err := d.searchChunk()
 	if err != nil {
@@ -254,6 +254,7 @@ func (d *delta) searchChunk() (bool, uint32, error) {
 	oldFileChunk = oldFileChunk[:n]
 
 	if string(oldFileChunk) != string(d.currChunk) {
+		log.Printf("Hash: %08x matched but chunk contains does not matched", d.hash)
 		return false, 0, nil
 	}
 

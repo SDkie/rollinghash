@@ -50,11 +50,7 @@ func TestEmptyInputFile(t *testing.T) {
 	defer os.Remove(outfile)
 
 	err := signature.GenerateSignature("../testdata/Test100.org", outfile)
-	if err == nil {
-		t.Fatalf("Test should fail with error:%s", signature.ErrEmptyInputFile)
-	}
-
-	if err != signature.ErrEmptyInputFile {
+	if err == nil || err != signature.ErrEmptyInputFile {
 		t.Fatalf("Test should fail with error:%s", signature.ErrEmptyInputFile)
 	}
 }

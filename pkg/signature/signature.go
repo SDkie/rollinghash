@@ -23,32 +23,32 @@ var (
 
 // GenerateSignature generates a signature file for a given input file.
 func GenerateSignature(inputFileName, sigFileName string) error {
+	// Input file
 	infile, err := os.Open(inputFileName)
 	if err != nil {
 		log.Printf("error opening input file: %s", err)
 		return err
 	}
 	defer infile.Close()
-
-	sigfile, err := os.OpenFile(sigFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Printf("error creating signature file: %s", err)
-		return err
-	}
-	defer sigfile.Close()
-
 	stats, err := infile.Stat()
 	if err != nil {
 		log.Printf("error getting file stats: %s", err)
 		return err
 	}
-
 	fileSize := stats.Size()
 	if fileSize == 0 {
 		err := ErrEmptyInputFile
 		log.Println(err)
 		return err
 	}
+
+	// singature file
+	sigfile, err := os.OpenFile(sigFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Printf("error creating signature file: %s", err)
+		return err
+	}
+	defer sigfile.Close()
 
 	chunkSize := getOptimalChunkSize(fileSize)
 	err = util.WriteUint32InHex(sigfile, uint32(chunkSize))
@@ -60,9 +60,8 @@ func GenerateSignature(inputFileName, sigFileName string) error {
 	log.Printf("Chunk size: %d", chunkSize)
 
 	chunk := make([]byte, chunkSize)
-	var n int
 	for i := 0; ; i++ {
-		n, err = infile.Read(chunk)
+		n, err := infile.Read(chunk)
 		if err != nil {
 			if err == io.EOF {
 				break

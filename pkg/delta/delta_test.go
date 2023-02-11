@@ -92,11 +92,7 @@ func TestEmptyOriginalFile(t *testing.T) {
 	defer os.Remove(outfile)
 
 	err := delta.GenerateDelta("../testdata/Test101.org", "../testdata/Test101.sig", "../testdata/Test101.update", outfile)
-	if err == nil {
-		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyOriginalFile)
-	}
-
-	if err != delta.ErrEmptyOriginalFile {
+	if err == nil || err != delta.ErrEmptyOriginalFile {
 		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyOriginalFile)
 	}
 }
@@ -106,11 +102,7 @@ func TestInvalidSignatureFile(t *testing.T) {
 	defer os.Remove(outfile)
 
 	err := delta.GenerateDelta("../testdata/Test102.org", "../testdata/Test102.sig", "../testdata/Test102.update", outfile)
-	if err == nil {
-		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidSignatureFile)
-	}
-
-	if err != signature.ErrInvalidSignatureFile {
+	if err == nil || err != signature.ErrInvalidSignatureFile {
 		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidSignatureFile)
 	}
 }
@@ -120,11 +112,7 @@ func TestInvalidChunkSize(t *testing.T) {
 	defer os.Remove(outfile)
 
 	err := delta.GenerateDelta("../testdata/Test103.org", "../testdata/Test103.sig", "../testdata/Test103.update", outfile)
-	if err == nil {
-		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidChunkSize)
-	}
-
-	if err != signature.ErrInvalidChunkSize {
+	if err == nil || err != signature.ErrInvalidChunkSize {
 		t.Fatalf("Test should fail with error:%s", signature.ErrInvalidChunkSize)
 	}
 }
@@ -134,11 +122,7 @@ func TestEmptyUpdatedFile(t *testing.T) {
 	defer os.Remove(outfile)
 
 	err := delta.GenerateDelta("../testdata/Test104.org", "../testdata/Test104.sig", "../testdata/Test104.update", outfile)
-	if err == nil {
-		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyUpdatedFile)
-	}
-
-	if err != delta.ErrEmptyUpdatedFile {
+	if err == nil || err != delta.ErrEmptyUpdatedFile {
 		t.Fatalf("Test should fail with error:%s", delta.ErrEmptyUpdatedFile)
 	}
 }
