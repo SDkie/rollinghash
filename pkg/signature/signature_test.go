@@ -28,7 +28,7 @@ func TestSignature(t *testing.T) {
 
 	for i, c := range cases {
 		outfile := fmt.Sprintf("%s.sig", uuid.New().String())
-		err := signature.GenerateSignature(c.InputFileName, outfile)
+		_, err := signature.GenerateSignature(c.InputFileName, outfile)
 		if err != nil {
 			t.Errorf("Test%d failed: error generating signature: %s", i+1, err)
 		}
@@ -49,7 +49,7 @@ func TestEmptyInputFile(t *testing.T) {
 	outfile := fmt.Sprintf("%s.sig", uuid.New().String())
 	defer os.Remove(outfile)
 
-	err := signature.GenerateSignature("../testdata/Test100.org", outfile)
+	_, err := signature.GenerateSignature("../testdata/Test100.org", outfile)
 	if err == nil || err != signature.ErrEmptyInputFile {
 		t.Fatalf("Test should fail with error:%s", signature.ErrEmptyInputFile)
 	}

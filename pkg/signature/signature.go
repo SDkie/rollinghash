@@ -21,45 +21,42 @@ var (
 	ErrInvalidChunkSize     = errors.New("invalid chunk size")
 )
 
+// Signature contains all the information stored in a signature file
+type Signature struct {
+	ChunkLen    uint32
+	TotalChunks uint32
+	Hashes      []uint32
+}
+
 // GenerateSignature generates a signature file for a given input file.
-func GenerateSignature(inputFileName, sigFileName string) error {
+func GenerateSignature(inputFileName, sigFileName string) (*Signature, error) {
+	var signature Signature
+
 	// Input file
 	infile, err := os.Open(inputFileName)
 	if err != nil {
 		log.Printf("error opening input file: %s", err)
-		return err
+		return nil, err
 	}
 	defer infile.Close()
 	stats, err := infile.Stat()
 	if err != nil {
 		log.Printf("error getting file stats: %s", err)
-		return err
+		return nil, err
 	}
 	fileSize := stats.Size()
 	if fileSize == 0 {
 		err := ErrEmptyInputFile
 		log.Println(err)
-		return err
+		return nil, err
 	}
 
-	// singature file
-	sigfile, err := os.OpenFile(sigFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Printf("error creating signature file: %s", err)
-		return err
-	}
-	defer sigfile.Close()
-
-	chunkSize := getOptimalChunkSize(fileSize)
-	err = util.WriteUint32InHex(sigfile, uint32(chunkSize))
-	if err != nil {
-		return err
-	}
+	signature.ChunkLen = getOptimalChunkSize(fileSize)
 
 	log.Printf("File size: %d", fileSize)
-	log.Printf("Chunk size: %d", chunkSize)
+	log.Printf("Chunk size: %d", signature.ChunkLen)
 
-	chunk := make([]byte, chunkSize)
+	chunk := make([]byte, signature.ChunkLen)
 	for i := 0; ; i++ {
 		n, err := infile.Read(chunk)
 		if err != nil {
@@ -67,26 +64,40 @@ func GenerateSignature(inputFileName, sigFileName string) error {
 				break
 			}
 			log.Printf("error reading file: %s", err)
-			return err
+			return nil, err
 		}
 		chunk = chunk[:n]
 
 		hash, _ := rabinkarp.Hash(chunk)
+		signature.Hashes = append(signature.Hashes, hash)
+		log.Printf("Chunk %d: Hash: %08x", i, hash)
+	}
+
+	err = signature.write(sigFileName)
+	return &signature, err
+}
+
+func (s *Signature) write(filename string) error {
+	sigfile, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Printf("error creating signature file: %s", err)
+		return err
+	}
+	defer sigfile.Close()
+
+	err = util.WriteUint32InHex(sigfile, s.ChunkLen)
+	if err != nil {
+		return err
+	}
+
+	for _, hash := range s.Hashes {
 		err = util.WriteUint32InHex(sigfile, hash)
 		if err != nil {
 			return err
 		}
-		log.Printf("Chunk %d: Hash: %08x", i, hash)
 	}
 
 	return nil
-}
-
-// Signature contains all the information stored in a signature file
-type Signature struct {
-	ChunkLen    uint32
-	TotalChunks uint32
-	Hashes      []uint32
 }
 
 // ReadSignature reads a signature file and returns a Signature struct.
