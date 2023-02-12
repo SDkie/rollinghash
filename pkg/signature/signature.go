@@ -77,6 +77,7 @@ func GenerateSignature(inputFileName, sigFileName string) (*Signature, error) {
 	return &signature, err
 }
 
+// write creates the signature file and writes the signature to it
 func (s *Signature) write(filename string) error {
 	sigfile, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
@@ -114,7 +115,7 @@ func ReadSignature(sigFileName string) (*Signature, error) {
 		log.Printf("error getting file stats: %s", err)
 		return nil, err
 	}
-	if stats.Size() == 0 || stats.Size()%4 != 0 {
+	if stats.Size() < 8 || stats.Size()%4 != 0 {
 		err := ErrInvalidSignatureFile
 		log.Println(err)
 		return nil, err

@@ -9,7 +9,8 @@ import (
 func getOptimalChunkSize(filesize int64) uint32 {
 	chunkLen := 256
 	if filesize > 256*256 {
-		chunkLen = int(math.Sqrt(float64(filesize))) & -128
+		sqRoot := int(math.Sqrt(float64(filesize)))
+		chunkLen = sqRoot & -128
 	}
 
 	return uint32(chunkLen)

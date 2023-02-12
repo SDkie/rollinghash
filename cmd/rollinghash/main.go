@@ -15,6 +15,6 @@ func main() {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("error from cmd execution: %s", err)
 	}
 }
